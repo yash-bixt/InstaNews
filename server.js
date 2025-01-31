@@ -4,6 +4,10 @@ import bodyParser from "body-parser";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { YoutubeTranscript } from "youtube-transcript";
 import path from "path";
+import dotenv from "dotenv";
+
+// Load environment variables
+dotenv.config();
 
 const app = express();
 const PORT = 5000;
@@ -16,8 +20,12 @@ app.use(bodyParser.json());
 const __dirname = path.resolve();
 app.use(express.static(path.join(__dirname, "public")));
 
-// Replace with your Gemini API Key
-const API_KEY = "AIzaSyDq68fNJ4kCQ5vnQbExM6iqpEWRnRsejfQ";
+// Use API key from .env
+const API_KEY = process.env.GEMINI_API_KEY;
+if (!API_KEY) {
+  console.error("Error: Missing Gemini API Key. Check your .env file.");
+  process.exit(1);
+}
 const genAI = new GoogleGenerativeAI(API_KEY);
 
 // Function to extract transcript from YouTube URL
