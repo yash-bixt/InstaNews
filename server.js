@@ -14,12 +14,11 @@ import puppeteer from 'puppeteer';
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = 5000;
 
 // Middleware
 app.use(cors());
 app.use(bodyParser.json());
-
 const __dirname = path.resolve();
 
 // Serve static files with index.html as default
@@ -145,233 +144,40 @@ async function generateInstaPost(transcript) {
   }
 }
 
-// Update the PDF generation function
-async function generateNewsletterPDF(newsletterData) {
-  const browser = await puppeteer.launch({
-    headless: 'new',
-    args: ['--no-sandbox']
-  });
-  const page = await browser.newPage();
-
-  // Set content with actual image
-  const htmlContent = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="UTF-8">
-      <style>
-        body {
-          font-family: Arial, sans-serif;
-          margin: 0;
-          padding: 0;
-          line-height: 1.4;
-          font-size: 11px;
-        }
-        .newsletter {
-          max-width: 800px;
-          margin: 0 auto;
-          padding: 20px;
-        }
-        .newsletter-header {
-          background-color: #5E549B;
-          color: #FFFFFF;
-          padding: 15px;
-          margin-bottom: 15px;
-        }
-        .newsletter-title {
-          font-size: 18px;
-          margin: 0;
-          font-weight: bold;
-        }
-        .main-content {
-          display: grid;
-          grid-template-columns: 7fr 3fr;
-          gap: 15px;
-        }
-        .feature-article img {
-          width: 100%;
-          max-height: 200px;
-          object-fit: cover;
-          border-radius: 4px;
-          margin-bottom: 10px;
-        }
-        .article-section {
-          margin-bottom: 15px;
-        }
-        .article-section h2 {
-          color: #5E549B;
-          font-size: 14px;
-          margin: 0 0 8px 0;
-          border-bottom: 1px solid #5E549B;
-          padding-bottom: 4px;
-        }
-        .sidebar {
-          background-color: #E2D8FF;
-          padding: 10px;
-          border-radius: 4px;
-          font-size: 10px;
-        }
-        .sidebar h3 {
-          color: #5E549B;
-          margin: 0 0 8px 0;
-          padding-bottom: 4px;
-          border-bottom: 1px solid #5E549B;
-          font-size: 12px;
-        }
-        .key-point {
-          background-color: #FFFFFF;
-          padding: 8px;
-          margin-bottom: 8px;
-          border-radius: 4px;
-        }
-        .bullet-points {
-          list-style-type: none;
-          padding-left: 0;
-          margin: 0;
-        }
-        .bullet-points li {
-          position: relative;
-          padding-left: 12px;
-          margin-bottom: 6px;
-        }
-        .bullet-points li:before {
-          content: "•";
-          color: #5E549B;
-          position: absolute;
-          left: 0;
-        }
-        .call-to-action {
-          background-color: #5E549B;
-          color: #FFFFFF;
-          padding: 8px;
-          border-radius: 4px;
-          margin-top: 10px;
-          font-size: 10px;
-        }
-        .feature-image {
-          width: 100%;
-          max-height: 200px;
-          object-fit: cover;
-          border-radius: 4px;
-          margin-bottom: 10px;
-        }
-      </style>
-    </head>
-    <body>
-      <div class="newsletter">
-        <div class="newsletter-header">
-          <h1 class="newsletter-title">${newsletterData.title}</h1>
-        </div>
-        <div class="main-content">
-          <div class="feature-article">
-            <img src="${newsletterData.thumbnailUrl}" class="feature-image" alt="Video Thumbnail">
-            <div class="article-section">
-              <h2>Description</h2>
-              <div>${newsletterData.description}</div>
-            </div>
-            <div class="article-section">
-              <h2>Key Findings</h2>
-              <ul class="bullet-points">
-                ${newsletterData.keyFindings.map(finding => `<li>${finding}</li>`).join('')}
-              </ul>
-            </div>
-            <div class="article-section">
-              <h2>Implications</h2>
-              <ul class="bullet-points">
-                ${newsletterData.implications.map(implication => `<li>${implication}</li>`).join('')}
-              </ul>
-            </div>
-          </div>
-          <div class="sidebar">
-            <h3>Quick Summary</h3>
-            <div class="key-point">
-              ${newsletterData.keyFindings.slice(0, 1).map(finding => `<div>${finding}</div>`).join('')}...
-            </div>
-            <div class="call-to-action">
-              ${newsletterData.callToAction}
-            </div>
-          </div>
-        </div>
-      </div>
-    </body>
-    </html>
-  `;
-
-  await page.setContent(htmlContent);
-
-  // Wait for image to load
-  await page.evaluateHandle(() => {
-    return new Promise((resolve) => {
-      const images = document.querySelectorAll('img');
-      if (images.length === 0) resolve();
-      
-      let loadedImages = 0;
-      images.forEach(img => {
-        if (img.complete) loadedImages++;
-        else img.onload = () => ++loadedImages === images.length && resolve();
-      });
-      if (loadedImages === images.length) resolve();
-    });
-  });
-
-  // Additional wait to ensure proper rendering
-  await new Promise(resolve => setTimeout(resolve, 1000));
-
-  // Set viewport for A4 size
-  await page.setViewport({
-    width: 794,
-    height: 1123,
-    deviceScaleFactor: 1
-  });
-
-  // First generate PDF without image
-  const pdf = await page.pdf({
-    width: '210mm',
-    height: '297mm',
-    printBackground: true,
-    margin: {
-      top: '15mm',
-      right: '15mm',
-      bottom: '15mm',
-      left: '15mm'
-    },
-    preferCSSPageSize: false
-  });
-
-  await browser.close();
-  return pdf;
-}
-
 // Function to send newsletter via email
 async function sendNewsletterEmail(email, newsletterData) {
   try {
-    const pdfBuffer = await generateNewsletterPDF(newsletterData);
-
-    // Prepare email with both PDF and image
     const mailOptions = {
       from: process.env.EMAIL_USER,
       to: email,
       subject: `Newsletter: ${newsletterData.title}`,
       html: `
         <html>
-          <body style="font-family: Arial, sans-serif; color: #000000;">
-            <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-              <h1 style="color: #5E549B;">Your Newsletter is Ready!</h1>
-              <p>Please find your generated newsletter attached as a PDF.</p>
-              <div style="background-color: #E2D8FF; padding: 15px; border-radius: 5px; margin-top: 20px;">
-                <p>The newsletter has been formatted for easy reading and sharing.</p>
-              </div>
+          <body>
+            <h1>${newsletterData.title}</h1>
+            <p><strong>Description:</strong> ${newsletterData.description}</p>
+            
+            <h2>Key Findings:</h2>
+            <ul>
+              ${newsletterData.keyFindings.map(finding => `<li>${finding}</li>`).join('')}
+            </ul>
+            
+            <h2>Implications:</h2>
+            <ul>
+              ${newsletterData.implications.map(implication => `<li>${implication}</li>`).join('')}
+            </ul>
+            
+            <div>
+              <strong>Call to Action:</strong>
+              <p>${newsletterData.callToAction}</p>
             </div>
           </body>
-        </html>
-      `,
+        </html>`,
       attachments: [
         {
-          filename: 'newsletter.pdf',
-          content: pdfBuffer,
-          contentType: 'application/pdf'
+          filename: 'thumbnail.jpg',
+          path: newsletterData.thumbnailUrl
         }
-        // Removed separate thumbnail attachment.
       ]
     };
 
@@ -533,12 +339,7 @@ app.post("/generate-instapost", async (req, res) => {
   }
 });
 
-// Fallback to index.html for any route
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public/index.html'));
-});
-
 // Start server
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`Server running on http://localhost:${PORT}`);
 });
