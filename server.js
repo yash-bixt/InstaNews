@@ -14,7 +14,7 @@ import puppeteer from 'puppeteer';
 dotenv.config();
 
 const app = express();
-const PORT = 5000;
+const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(cors());
@@ -533,7 +533,12 @@ app.post("/generate-instapost", async (req, res) => {
   }
 });
 
+// Fallback to index.html for any route
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public/index.html'));
+});
+
 // Start server
 app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });
