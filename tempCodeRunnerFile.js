@@ -1,3 +1,2 @@
- authenticateUser, (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
+
+    const emailSent = await sendNewsletterEmail(clientEmail, {

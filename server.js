@@ -9,6 +9,7 @@ import axios from "axios";
 import * as cheerio from "cheerio";
 import nodemailer from "nodemailer";
 import puppeteer from 'puppeteer';
+import os from "os";
 
 // Load environment variables
 dotenv.config();
@@ -339,7 +340,17 @@ app.post("/generate-instapost", async (req, res) => {
   }
 });
 
-// Start server
-app.listen(PORT, () => {
+// Start server, listen on all network interfaces
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on http://localhost:${PORT}`);
+  
+  // Log network-accessible addresses
+  const nets = os.networkInterfaces();
+  for (const name in nets) {
+    for (const net of nets[name]) {
+      if (net.family === 'IPv4' && !net.internal) {
+        console.log(`Accessible on: http://${net.address}:${PORT}`);
+      }
+    }
+  }
 });
